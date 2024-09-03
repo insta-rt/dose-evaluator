@@ -1,4 +1,6 @@
 import streamlit as st
+import plotly.express as px
+
 from src import utils
 
 
@@ -6,15 +8,22 @@ def display_summary(dose, structure_masks):
     struct_intersect = {}
     summary_df = {}
     for id in structure_masks.keys():
-        st.divider()
-
         st.markdown(f"## Summary of Segmentation: {id}")
         if len(struct_intersect) == 0:
             struct_intersect = set(structure_masks[id].keys())
         else:
             struct_intersect = struct_intersect.intersection(set(structure_masks[id].keys()))
         summary_df[id] = utils.dose_summary(dose, structure_masks[id])
+
+        df = utils.dvh_by_structure(dose, structure_masks[id])
+        fig = px.line(df, x="Dose", y="Volume", color="Structure")
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
+        st.plotly_chart(fig, use_container_width=True)
+
         st.table(summary_df[id])
+        csv = summary_df[id].to_csv(index=True)
+        st.download_button(label="Download CSV", data=csv, file_name=f"dvh_data_{id}.csv", mime="text/csv")
 
     return summary_df, struct_intersect
 
@@ -28,6 +37,20 @@ def compare_differences(summary_df, selected_structures, ref_id):
             st.markdown(f"#### Dose differences between Segmentation: {id} vs Reference: {ref_id}")
             diff = summary_df[id].loc[structure, :] - summary_df[ref_id].loc[structure, :]
             st.table(diff)
+
+
+def display_difference_dvh(dose, structure_masks, selected_structures):
+    for structure in selected_structures:
+        current_structure = {}
+        for id in structure_masks.keys():
+            current_structure[structure + "_" + str(id)] = structure_masks[id][structure]
+
+        st.markdown(f"#### DVH comparisons for {structure}")
+        df = utils.dvh_by_structure(dose, current_structure)
+        fig = px.line(df, x="Dose", y="Volume", color="Structure")
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def panel():
@@ -62,7 +85,7 @@ def panel():
 
         if files_uploaded:
             st.markdown(f"Both dose and mask files are uploaded. Click the toggle button below to proceed.")
-            step_1_complete = st.toggle("Compute")
+            step_1_complete = st.toggle("Ready to Compute!")
 
     with tab2:
         st.markdown(f"## Step 2: Dose Metrics")
@@ -87,11 +110,14 @@ def panel():
         st.markdown(f"## Step 3: Examine Differences")
         st.markdown(f"Complete step 1 and 2 to examine differences.")
         if step_1_complete and step_2_complete:
-            ref_id = st.number_input("Choose reference segmentation: ", min_value=1, max_value=n_compares, value="min", step=1)
             selected_structures = st.multiselect(
                 "Choose structures to compare:",
                 list(struct_intersect),
                 [],
             )
 
+            display_difference_dvh(dose, structure_masks, selected_structures)
+
+            ref_id = st.number_input("Choose reference segmentation: ", min_value=1, max_value=n_compares, value="min",
+                                     step=1)
             compare_differences(summary_df, selected_structures, ref_id)

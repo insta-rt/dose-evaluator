@@ -19,7 +19,7 @@ def display_summary(structure_mask, doses):
 
         summary_df[id] = utils.dose_summary(doses[id], structure_mask)
         st.table(summary_df[id])
-        csv = summary_df[id].to_csv(index=False)
+        csv = summary_df[id].to_csv(index=True)
         st.download_button(label="Download CSV", data=csv, file_name=f"dvh_data_{id}.csv", mime="text/csv")
 
         st.divider()
@@ -39,7 +39,7 @@ def compare_differences(summary_df, selected_structures, ref_id):
         st.table(diff_table)
 
 
-def display_difference_dvh(doses, structure_mask, selected_structures, ref_id):
+def display_difference_dvh(doses, structure_mask, selected_structures):
     for structure in selected_structures:
         st.markdown(f"#### DVH comparisons for {structure}")
         df = utils.dvh_by_dose(doses, structure_mask[structure], structure)
@@ -111,5 +111,5 @@ def panel():
             )
 
             compare_differences(summary_df, selected_structures, ref_id)
-            display_difference_dvh(doses, structure_mask, selected_structures, ref_id)
+            display_difference_dvh(doses, structure_mask, selected_structures)
         st.divider()
