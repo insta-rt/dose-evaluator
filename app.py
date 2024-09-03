@@ -1,8 +1,10 @@
 import streamlit as st
 
 from src.instructions import instruction_panel
-from src.simple_panel import dvh_panel
+import src.single_dose_single_segm as sdss
 import src.single_dose_mult_segm as sdms
+import src.mult_dose_single_segm as mdss
+import src.mult_dose_mult_segm as mdms
 
 
 # Initial code from here: https://docs.streamlit.io/get-started/tutorials/create-a-multipage-app
@@ -11,20 +13,22 @@ import src.single_dose_mult_segm as sdms
 
 def single_dose_single_segmentation():
     st.markdown(f"# {list(page_names_to_funcs.keys())[1]}")
-    dvh_panel()
+    sdss.panel()
 
 
 def single_dose_multiple_segmentation():
     st.markdown(f"# {list(page_names_to_funcs.keys())[2]}")
     sdms.panel()
 
+
 def multiple_dose_single_segmentation():
     st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
+    mdss.panel()
 
 
 def multiple_dose_multiple_segmentation():
     st.markdown(f"# {list(page_names_to_funcs.keys())[4]}")
-
+    mdms.panel()
 
 
 page_names_to_funcs = {

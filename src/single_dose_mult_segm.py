@@ -1,5 +1,4 @@
 import streamlit as st
-import plotly.express as px
 from src import utils
 
 
@@ -32,39 +31,48 @@ def compare_differences(summary_df, selected_structures, ref_id):
 
 
 def panel():
-    st.markdown(f"## Step 1: Upload dose distribution volume and mask files")
-    st.markdown(
-        f"Look [here](https://pyradise.readthedocs.io) to format your files into NIfTI format using Pyradise.")
 
-    dose_file = st.file_uploader("Upload the unique dose distribution volume (in .nii.gz)", type=['nii', 'gz'])
+    step_1_complete = False
+    step_2_complete = False
 
-    max_compares = 5
-    n_compares = st.number_input(f"Number of segmentations to compare (maximum: {max_compares}):",
-                                 min_value=1, max_value=max_compares, value="min", step=1)
+    tab1, tab2, tab3 = st.tabs(["🗃️Upload Data", "📊 View Metrics", "🔍 Examine Differences"])
 
-    mask_files = {}
-    st.markdown("Upload the mask volumes for each segmentation.")
-    if n_compares > 1:
-        for id in range(1, n_compares+1):
-            mask_files[id] = st.file_uploader(f"Upload mask volumes index: {id+1} (in .nii.gz)", accept_multiple_files=True,
-                                          type=['nii', 'gz'], key=id+1)
-    else:
-        mask_files[1] = st.file_uploader("Upload mask volumes (in .nii.gz)", accept_multiple_files=True,
-                                      type=['nii', 'gz'], key=0)
+    with tab1:
+        st.markdown(f"## Step 1: Upload dose distribution volume and mask files")
+        st.markdown(
+            f"Look [here](https://pyradise.readthedocs.io) to format your files into NIfTI format using Pyradise.")
 
-    files_uploaded = (dose_file is not None) and (len(mask_files) > 0)
+        dose_file = st.file_uploader("Upload the unique dose distribution volume (in .nii.gz)", type=['nii', 'gz'])
 
-    if files_uploaded:
-        st.markdown(f"Both dose and mask files are uploaded. Click the toggle button below to proceed.")
-        on = st.toggle("Compute")
+        max_compares = 5
+        n_compares = st.number_input(f"Number of segmentations to compare (maximum: {max_compares}):",
+                                     min_value=1, max_value=max_compares, value="min", step=1)
 
-        dose, _ = utils.read_dose(dose_file)
-        structure_masks = {}
-        for id in mask_files.keys():
-            structure_masks[id] = utils.read_masks(mask_files[id])
+        mask_files = {}
+        st.markdown("Upload the mask volumes for each segmentation.")
+        if n_compares > 1:
+            for id in range(1, n_compares+1):
+                mask_files[id] = st.file_uploader(f"Upload mask volumes index: {id} (in .nii.gz)", accept_multiple_files=True,
+                                              type=['nii', 'gz'], key=id+1)
+        else:
+            mask_files[1] = st.file_uploader("Upload mask volumes (in .nii.gz)", accept_multiple_files=True,
+                                          type=['nii', 'gz'], key=0)
 
-        if on:
-            st.markdown(f"## Step 2: Dose Metrics")
+        files_uploaded = (dose_file is not None) and (len(mask_files) > 0)
+
+        if files_uploaded:
+            st.markdown(f"Both dose and mask files are uploaded. Click the toggle button below to proceed.")
+            step_1_complete = st.toggle("Compute")
+
+    with tab2:
+        st.markdown(f"## Step 2: Dose Metrics")
+        st.markdown(f"Complete step 1 to view metrics.")
+        if step_1_complete:
+            dose, _ = utils.read_dose(dose_file)
+            structure_masks = {}
+            for id in mask_files.keys():
+                structure_masks[id] = utils.read_masks(mask_files[id])
+
             summary_df, struct_intersect = display_summary(dose, structure_masks)
 
             st.divider()
@@ -73,12 +81,17 @@ def panel():
                 st.markdown("No common structures found in the segmentations. Please re-upload the mask files.")
 
             else:
-                st.markdown(f"## Step 3: List Differences")
-                ref_id = st.number_input("Choose reference segmentation: ", min_value=1, max_value=n_compares, value="min", step=1)
-                selected_structures = st.multiselect(
-                    "Choose structures to compare:",
-                    list(struct_intersect),
-                    [],
-                )
+                step_2_complete = True
 
-                compare_differences(summary_df, selected_structures, ref_id)
+    with tab3:
+        st.markdown(f"## Step 3: Examine Differences")
+        st.markdown(f"Complete step 1 and 2 to examine differences.")
+        if step_1_complete and step_2_complete:
+            ref_id = st.number_input("Choose reference segmentation: ", min_value=1, max_value=n_compares, value="min", step=1)
+            selected_structures = st.multiselect(
+                "Choose structures to compare:",
+                list(struct_intersect),
+                [],
+            )
+
+            compare_differences(summary_df, selected_structures, ref_id)
